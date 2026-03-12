@@ -38,20 +38,13 @@ namespace {
 
   struct tray_pos_t { float x, z; };
 
-  static constexpr tray_pos_t default_tray_positions[TRAY_POSITIONS] = {
-    // 3 trays side-by-side, each tray is a 10x2 grid.
-    // For each Z row, hit the 2 X points of tray 1, then tray 2, then tray 3.
-    { -44.45f,  57.15f }, { -31.75f,  57.15f }, { -6.35f,  57.15f }, {  6.35f,  57.15f }, { 31.75f,  57.15f }, { 44.45f,  57.15f },
-    { -44.45f,  44.45f }, { -31.75f,  44.45f }, { -6.35f,  44.45f }, {  6.35f,  44.45f }, { 31.75f,  44.45f }, { 44.45f,  44.45f },
-    { -44.45f,  31.75f }, { -31.75f,  31.75f }, { -6.35f,  31.75f }, {  6.35f,  31.75f }, { 31.75f,  31.75f }, { 44.45f,  31.75f },
-    { -44.45f,  19.05f }, { -31.75f,  19.05f }, { -6.35f,  19.05f }, {  6.35f,  19.05f }, { 31.75f,  19.05f }, { 44.45f,  19.05f },
-    { -44.45f,   6.35f }, { -31.75f,   6.35f }, { -6.35f,   6.35f }, {  6.35f,   6.35f }, { 31.75f,   6.35f }, { 44.45f,   6.35f },
-    { -44.45f,  -6.35f }, { -31.75f,  -6.35f }, { -6.35f,  -6.35f }, {  6.35f,  -6.35f }, { 31.75f,  -6.35f }, { 44.45f,  -6.35f },
-    { -44.45f, -19.05f }, { -31.75f, -19.05f }, { -6.35f, -19.05f }, {  6.35f, -19.05f }, { 31.75f, -19.05f }, { 44.45f, -19.05f },
-    { -44.45f, -31.75f }, { -31.75f, -31.75f }, { -6.35f, -31.75f }, {  6.35f, -31.75f }, { 31.75f, -31.75f }, { 44.45f, -31.75f },
-    { -44.45f, -44.45f }, { -31.75f, -44.45f }, { -6.35f, -44.45f }, {  6.35f, -44.45f }, { 31.75f, -44.45f }, { 44.45f, -44.45f },
-    { -44.45f, -57.15f }, { -31.75f, -57.15f }, { -6.35f, -57.15f }, {  6.35f, -57.15f }, { 31.75f, -57.15f }, { 44.45f, -57.15f }
-  };
+  // Default 3-tray pattern (10 rows x 2 slots per tray), kept fully inside build limits.
+  // Column order per row: Tray1 Slot1, Tray1 Slot2, Tray2 Slot1, Tray2 Slot2, Tray3 Slot1, Tray3 Slot2.
+  constexpr float DEFAULT_X_MARGIN_MM = 24.0f;
+  constexpr float DEFAULT_Z_START_MM = 40.0f;
+  constexpr float DEFAULT_SLOT_SPACING_MM = 16.0f;
+  constexpr float DEFAULT_TRAY_GAP_MM = 36.0f;
+  constexpr float DEFAULT_ROW_SPACING_MM = 18.0f;
 
   static tray_pos_t tray_positions[TRAY_POSITIONS];
 
@@ -90,8 +83,19 @@ namespace {
 
   void initialize_tray_positions() {
     if (tray_positions_initialized) return;
-    for (uint8_t i = 0; i < TRAY_POSITIONS; ++i)
-      tray_positions[i] = clamp_tray_position(default_tray_positions[i]);
+
+    const float pattern_width = (DEFAULT_SLOT_SPACING_MM * 3.0f) + (DEFAULT_TRAY_GAP_MM * 2.0f);
+    const float x_start = clamp_to_axis_range((X_MAX_POS - pattern_width) * 0.5f, X_MIN_POS + DEFAULT_X_MARGIN_MM, X_MAX_POS - pattern_width - DEFAULT_X_MARGIN_MM);
+
+    for (uint8_t row = 0; row < TRAY_ROWS; ++row) {
+      const float row_z = DEFAULT_Z_START_MM + DEFAULT_ROW_SPACING_MM * row;
+      for (uint8_t col = 0; col < TRAY_COLUMNS; ++col) {
+        const float step = (col / 2) * (DEFAULT_SLOT_SPACING_MM + DEFAULT_TRAY_GAP_MM) + (col & 0x01 ? DEFAULT_SLOT_SPACING_MM : 0.0f);
+        const uint8_t index = row * TRAY_COLUMNS + col;
+        tray_positions[index] = clamp_tray_position({ x_start + step, row_z });
+      }
+    }
+
     tray_positions_initialized = true;
   }
 
