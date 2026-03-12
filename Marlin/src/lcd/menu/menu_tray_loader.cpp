@@ -41,6 +41,7 @@ namespace {
   // Default 3-tray pattern (10 rows x 2 slots per tray), kept fully inside build limits.
   // Column order per row: Tray1 Slot1, Tray1 Slot2, Tray2 Slot1, Tray2 Slot2, Tray3 Slot1, Tray3 Slot2.
   constexpr float DEFAULT_X_MARGIN_MM = 24.0f;
+  constexpr float DEFAULT_Y_OFFSET_MM = 101.6f; // ~4in from Y=0
   constexpr float DEFAULT_Z_START_MM = 40.0f;
   constexpr float DEFAULT_SLOT_SPACING_MM = 16.0f;
   constexpr float DEFAULT_TRAY_GAP_MM = 36.0f;
@@ -74,6 +75,10 @@ namespace {
 
   constexpr float clamp_to_axis_range(const float value, const float minv, const float maxv) {
     return value < minv ? minv : (value > maxv ? maxv : value);
+  }
+
+  float tray_loader_y_target() {
+    return clamp_to_axis_range(Y_MIN_POS + DEFAULT_Y_OFFSET_MM, Y_MIN_POS, Y_MAX_POS);
   }
 
   tray_pos_t clamp_tray_position(const tray_pos_t &pos) {
@@ -149,7 +154,7 @@ namespace {
       return;
     }
 
-    do_blocking_move_to(target.x, current_position.y, target.z);
+    do_blocking_move_to(target.x, tray_loader_y_target(), target.z);
     tray_position_index = index;
     active_row = (index / TRAY_COLUMNS) + 1;
     active_tray = tray_number_for_col(index % TRAY_COLUMNS);
@@ -163,7 +168,7 @@ namespace {
 
   void action_center() {
     if (!tray_loader_ready()) return;
-    do_blocking_move_to(0.0f, current_position.y, 0.0f);
+    do_blocking_move_to(0.0f, tray_loader_y_target(), 0.0f);
     ui.completion_feedback();
   }
 
@@ -174,15 +179,81 @@ namespace {
   void action_bump_z_forward() {
     if (!tray_loader_ready()) return;
     const float next_z = clamp_to_axis_range(current_position.z + Z_BUMP_MM, Z_MIN_POS, Z_MAX_POS);
-    do_blocking_move_to(current_position.x, current_position.y, next_z);
+    do_blocking_move_to(current_position.x, tray_loader_y_target(), next_z);
     ui.completion_feedback();
   }
 
   void action_bump_z_back() {
     if (!tray_loader_ready()) return;
     const float next_z = clamp_to_axis_range(current_position.z - Z_BUMP_MM, Z_MIN_POS, Z_MAX_POS);
-    do_blocking_move_to(current_position.x, current_position.y, next_z);
+    do_blocking_move_to(current_position.x, tray_loader_y_target(), next_z);
     ui.completion_feedback();
+  }
+
+  #if HAS_FILAMENT_SENSOR
+    bool wait_for_filament_sensor_state_change() {
+      const bool start_state = READ(FIL_RUNOUT_PIN) == FIL_RUNOUT_STATE;
+
+      while (true) {
+        if ((READ(FIL_RUNOUT_PIN) == FIL_RUNOUT_STATE) != start_state) {
+          ui.status_printf_P(0, PSTR("Runout state changed"));
+          return true;
+        }
+
+        if (current_position.z >= (Z_MAX_POS - 0.01f)) {
+          ui.status_printf_P(0, PSTR("No state change before Z max"));
+          return false;
+        }
+
+        const float next_z = clamp_to_axis_range(current_position.z + Z_BUMP_MM, Z_MIN_POS, Z_MAX_POS);
+        do_blocking_move_to(current_position.x, tray_loader_y_target(), next_z);
+      }
+    }
+  #endif
+
+  void run_tray_pattern_once() {
+    for (uint8_t index = 0; index < TRAY_POSITIONS; ++index) {
+      const uint8_t row = index / TRAY_COLUMNS;
+      const uint8_t col = index % TRAY_COLUMNS;
+      const tray_pos_t target = clamp_tray_position(tray_positions[index]);
+
+      if (!tray_position_within_limits(target)) {
+        ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
+        return;
+      }
+
+      active_tray = tray_number_for_col(col);
+      active_row = row + 1;
+      active_slot = slot_number_for_col(col);
+      ui.status_printf_P(0, PSTR("Cycle FWD T%u R%u S%u"), int(active_tray), int(active_row), int(active_slot));
+
+      do_blocking_move_to(target.x, tray_loader_y_target(), target.z);
+      tray_position_index = index;
+
+      if (row == TRAY_ROWS - 1 && (col & 0x01))
+        ++completed_tray_count;
+    }
+
+    tray_cycle_phase = PHASE_REVERSE;
+
+    for (int16_t index = TRAY_POSITIONS - 1; index >= 0; --index) {
+      const uint8_t row = uint8_t(index) / TRAY_COLUMNS;
+      const uint8_t col = uint8_t(index) % TRAY_COLUMNS;
+      const tray_pos_t target = clamp_tray_position(tray_positions[index]);
+
+      if (!tray_position_within_limits(target)) {
+        ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
+        return;
+      }
+
+      active_tray = tray_number_for_col(col);
+      active_row = row + 1;
+      active_slot = slot_number_for_col(col);
+      ui.status_printf_P(0, PSTR("Cycle REV T%u R%u S%u"), int(active_tray), int(active_row), int(active_slot));
+
+      do_blocking_move_to(target.x, tray_loader_y_target(), target.z);
+      tray_position_index = uint8_t(index);
+    }
   }
 
   void save_manual_anchor(const uint8_t index) {
@@ -232,50 +303,18 @@ namespace {
     initialize_tray_positions();
     if (!tray_loader_ready()) return;
 
+    do_blocking_move_to(current_position.x, tray_loader_y_target(), current_position.z);
+
     tray_cycle_phase = PHASE_FORWARD;
 
-    for (uint8_t index = 0; index < TRAY_POSITIONS; ++index) {
-      const uint8_t row = index / TRAY_COLUMNS;
-      const uint8_t col = index % TRAY_COLUMNS;
-      const tray_pos_t target = clamp_tray_position(tray_positions[index]);
+    run_tray_pattern_once();
 
-      if (!tray_position_within_limits(target)) {
-        ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
-        return;
+    #if HAS_FILAMENT_SENSOR
+      if (wait_for_filament_sensor_state_change()) {
+        tray_cycle_phase = PHASE_FORWARD;
+        run_tray_pattern_once();
       }
-
-      active_tray = tray_number_for_col(col);
-      active_row = row + 1;
-      active_slot = slot_number_for_col(col);
-      ui.status_printf_P(0, PSTR("Cycle FWD T%u R%u S%u"), int(active_tray), int(active_row), int(active_slot));
-
-      do_blocking_move_to(target.x, current_position.y, target.z);
-      tray_position_index = index;
-
-      if (row == TRAY_ROWS - 1 && (col & 0x01))
-        ++completed_tray_count;
-    }
-
-    tray_cycle_phase = PHASE_REVERSE;
-
-    for (int16_t index = TRAY_POSITIONS - 1; index >= 0; --index) {
-      const uint8_t row = uint8_t(index) / TRAY_COLUMNS;
-      const uint8_t col = uint8_t(index) % TRAY_COLUMNS;
-      const tray_pos_t target = clamp_tray_position(tray_positions[index]);
-
-      if (!tray_position_within_limits(target)) {
-        ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
-        return;
-      }
-
-      active_tray = tray_number_for_col(col);
-      active_row = row + 1;
-      active_slot = slot_number_for_col(col);
-      ui.status_printf_P(0, PSTR("Cycle REV T%u R%u S%u"), int(active_tray), int(active_row), int(active_slot));
-
-      do_blocking_move_to(target.x, current_position.y, target.z);
-      tray_position_index = uint8_t(index);
-    }
+    #endif
 
     tray_cycle_phase = PHASE_COMPLETE;
     queue.inject_P(PSTR("G28"));
