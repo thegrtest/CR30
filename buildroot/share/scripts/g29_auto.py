@@ -31,6 +31,16 @@ input_file = folder + my_file
 min_size = 40
 probing_points = 3  # points x points
 
+# Keep probing area away from hard machine limits so generated coordinates
+# don't hit walls / endstops. Set to 0 to disable extra margin.
+edge_buffer = 5
+
+# Usable machine area (before applying edge_buffer)
+bed_min_x = 0
+bed_max_x = 235
+bed_min_y = 0
+bed_max_y = 235
+
 # other stuff
 min_x = 500
 min_y = min_x
@@ -164,6 +174,30 @@ if max_y - min_y < min_size:
     # print('min_y! with {}'.format(int(max_y - min_y)))
     min_y = int(min_y) - offset_y
     max_y = int(max_y) + offset_y
+
+
+def clamp(value, lower, upper):
+    return max(lower, min(value, upper))
+
+
+# Keep generated probing window inside a buffered printable area.
+safe_min_x = bed_min_x + edge_buffer
+safe_max_x = bed_max_x - edge_buffer
+safe_min_y = bed_min_y + edge_buffer
+safe_max_y = bed_max_y - edge_buffer
+
+if safe_min_x > safe_max_x or safe_min_y > safe_max_y:
+    raise ValueError('edge_buffer is too large for configured bed limits')
+
+min_x = clamp(min_x, safe_min_x, safe_max_x)
+max_x = clamp(max_x, safe_min_x, safe_max_x)
+min_y = clamp(min_y, safe_min_y, safe_max_y)
+max_y = clamp(max_y, safe_min_y, safe_max_y)
+
+if min_x > max_x:
+    min_x = max_x = clamp((min_x + max_x) / 2.0, safe_min_x, safe_max_x)
+if min_y > max_y:
+    min_y = max_y = clamp((min_y + max_y) / 2.0, safe_min_y, safe_max_y)
 
 
 new_command = 'G29 L{0} R{1} F{2} B{3} P{4}\n'.format(min_x,
