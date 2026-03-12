@@ -56,9 +56,11 @@ body.loading {
   inset: 0;
   z-index: 1000;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #101010;
+  gap: 18px;
+  background: radial-gradient(circle at center, #1f1f1f 0%, #0e0e0e 65%);
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.35s ease, visibility 0.35s ease;
@@ -69,67 +71,80 @@ body.loading #loading-screen {
   visibility: visible;
 }
 
-.conveyor {
-  width: min(92vw, 880px);
-  padding: 20px 0;
+.loading-brand {
+  font-size: 2rem;
+  letter-spacing: 1px;
+  color: #efe2c3;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
 }
 
+.loading-subtitle {
+  font-family: "Lucida Console", Monaco, monospace;
+  color: #9fc8ab;
+  font-size: 0.9rem;
+}
+
+.conveyor {
+  position: relative;
+  width: min(92vw, 900px);
+  padding: 28px 0;
+}
+
+.conveyor-rail {
+  height: 6px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #5c5c5c, #8c8c8c 40%, #5c5c5c);
+  opacity: 0.9;
+}
+
+.conveyor-rail.top { margin-bottom: 8px; }
+.conveyor-rail.bottom { margin-top: 8px; }
+
 .belt {
-  height: 34px;
+  height: 36px;
   border: 2px solid #3b3b3b;
   border-radius: 8px;
   background:
-    linear-gradient(to right, rgba(255, 255, 255, 0.08) 0 8%, transparent 8% 16%) 0 0 / 44px 100%,
-    linear-gradient(#2f2f2f, #222);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
-  animation: conveyor-roll 0.9s linear infinite;
+    linear-gradient(to right, rgba(255, 255, 255, 0.12) 0 8%, transparent 8% 16%) 0 0 / 42px 100%,
+    linear-gradient(#3a3a3a, #1f1f1f);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 18px rgba(109, 165, 125, 0.08);
+  animation: conveyor-roll 0.7s linear infinite;
 }
 
-.bullet {
-  position: relative;
-  top: -53px;
-  left: -40px;
-  width: 16px;
-  height: 44px;
-  border-radius: 8px 8px 6px 6px;
-  background: linear-gradient(#d3b989, #aa8b56);
-  border: 2px solid #80683f;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-  animation: bullet-run 2.1s linear infinite;
-}
-
-.bullet::before {
-  content: "";
+.bullet-shell,
+.bullet-tip {
   position: absolute;
-  top: -16px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: -60px;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
+  animation: bullet-run 1.8s cubic-bezier(.2, .8, .4, 1) infinite;
+}
+
+.bullet-shell {
+  top: 5px;
+  width: 22px;
+  height: 48px;
+  border-radius: 10px;
+  background: linear-gradient(#dfc796, #b69256 46%, #8f6d3a);
+  border: 2px solid #735833;
+}
+
+.bullet-tip {
+  top: -12px;
   width: 0;
   height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-bottom: 16px solid #c9ad7a;
-}
-
-.bullet::after {
-  content: "";
-  position: absolute;
-  bottom: 5px;
-  left: 2px;
-  right: 2px;
-  height: 8px;
-  border-top: 2px solid #7f6538;
-  opacity: 0.9;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-bottom: 20px solid #e3d0ab;
 }
 
 @keyframes conveyor-roll {
   from { background-position: 0 0, 0 0; }
-  to { background-position: -44px 0, 0 0; }
+  to { background-position: -42px 0, 0 0; }
 }
 
 @keyframes bullet-run {
   from { transform: translateX(0); }
-  to { transform: translateX(calc(min(92vw, 880px) + 80px)); }
+  to { transform: translateX(calc(min(92vw, 900px) + 120px)); }
 }
 h1 {
   margin: 0;
@@ -249,3 +264,32 @@ div.form-wrapper button {
   background-color: #4d7a5e;
   color: #e5e5e5;
   }
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.info-card {
+  background: #2a2a2a;
+  border: 2px solid #314b3b;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.info-card-wide {
+  grid-column: 1 / -1;
+}
+
+.info-card h2 {
+  font-size: 0.95rem;
+  color: #9fc8ab;
+  margin-bottom: 8px;
+}
+
+.big-value {
+  font-size: 1.45rem;
+  color: #efe2c3;
+  letter-spacing: 0.3px;
+}

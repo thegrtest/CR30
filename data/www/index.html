@@ -10,10 +10,15 @@
 </head>
 <body class="loading">
   <div id="loading-screen" aria-hidden="true">
+    <div class="loading-brand">The Kinetic Group</div>
     <div class="conveyor" role="presentation">
+      <div class="conveyor-rail top"></div>
       <div class="belt"></div>
-      <div class="bullet"></div>
+      <div class="conveyor-rail bottom"></div>
+      <div class="bullet-shell"></div>
+      <div class="bullet-tip"></div>
     </div>
+    <div class="loading-subtitle">Initializing high-speed tray loader</div>
   </div>
   <div class="tabs">
     <div id="logo"></div>
@@ -32,10 +37,21 @@
       </div>
     </div>
     <input class="input" name="tabs" type="radio" id="tab-2"/>
-    <label class="label" for="tab-2">controls</label>
+    <label class="label" for="tab-2">information</label>
     <div class="panel">
-      <div class="panel-content">
-        #controls
+      <div class="panel-content info-grid">
+        <div class="info-card">
+          <h2>Trays Loaded</h2>
+          <div id="tray-count" class="big-value">0</div>
+        </div>
+        <div class="info-card">
+          <h2>Cycle Phase</h2>
+          <div id="cycle-phase" class="big-value">Idle</div>
+        </div>
+        <div class="info-card info-card-wide">
+          <h2>Current Position</h2>
+          <div id="cycle-position" class="big-value">Tray 1 • Row 1 • Slot 1</div>
+        </div>
       </div>
     </div>
   </div>
