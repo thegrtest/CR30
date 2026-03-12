@@ -1,5 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
+  document.body.classList.add('loading');
+
   const ws = new WebSocket(`ws://${location.host}/ws`);
+
+  const clearLoadingScreen = () => {
+    document.body.classList.remove('loading');
+  };
+
+  ws.addEventListener('open', () => {
+    setTimeout(clearLoadingScreen, 1200);
+  });
+
+  ws.addEventListener('error', () => {
+    setTimeout(clearLoadingScreen, 2000);
+  });
+
+  setTimeout(clearLoadingScreen, 4000);
 
   ws.onmessage = (e) => {
     if (typeof e.data === 'string') {
