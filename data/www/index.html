@@ -8,7 +8,13 @@
 
   <script type="text/javascript" src="marlin.js"></script>
 </head>
-<body>
+<body class="loading">
+  <div id="loading-screen" aria-hidden="true">
+    <div class="conveyor" role="presentation">
+      <div class="belt"></div>
+      <div class="bullet"></div>
+    </div>
+  </div>
   <div class="tabs">
     <div id="logo"></div>
     <input class="input" name="tabs" type="radio" id="tab-1" checked="checked"/>
