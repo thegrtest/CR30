@@ -45,7 +45,7 @@ namespace {
   constexpr float DEFAULT_Z_START_MM = 40.0f;
   constexpr float DEFAULT_SLOT_SPACING_MM = 16.0f;
   constexpr float DEFAULT_TRAY_GAP_MM = 36.0f;
-  constexpr float DEFAULT_ROW_SPACING_MM = 12.7f; // ~0.5in row-to-row Z change
+  constexpr float DEFAULT_ROW_SPACING_MM = 101.6f; // ~4.0in row-to-row Z change (8x increase)
 
   static tray_pos_t tray_positions[TRAY_POSITIONS];
 
@@ -56,7 +56,7 @@ namespace {
   static tray_pos_t row2_first = {};
 
   constexpr float Z_BUMP_MM = 6.35f;            // 0.25in
-  constexpr float MIN_ROW_Z_DELTA_MM = 12.7f;  // ~0.5in
+  constexpr float MIN_ROW_Z_DELTA_MM = 101.6f; // ~4.0in minimum row delta (8x increase)
 
   enum tray_cycle_phase_t : uint8_t {
     PHASE_IDLE,
