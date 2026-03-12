@@ -29,7 +29,6 @@
 #if HAS_LCD_MENU
 
 #include "menu.h"
-#include "../../module/temperature.h"
 #include "../../gcode/queue.h"
 #include "../../module/printcounter.h"
 #include "../../module/stepper.h"
@@ -52,7 +51,6 @@
 
 void menu_tune();
 void menu_motion();
-void menu_temperature();
 void menu_configuration();
 void menu_repeat_markers();
 void menu_language();
@@ -70,10 +68,6 @@ void menu_tray_loader();
   void menu_mixer();
 #endif
 
-#if ENABLED(ADVANCED_PAUSE_FEATURE)
-  void _menu_temp_filament_op(const PauseMode, const int8_t);
-  void menu_change_filament();
-#endif
 
 #if ENABLED(LCD_INFO_MENU)
   void menu_info();
@@ -161,10 +155,6 @@ void menu_main() {
     SUBMENU(MSG_CUTTER(MENU), menu_spindle_laser);
   #endif
 
-  #if HAS_TEMPERATURE
-    SUBMENU(MSG_TEMPERATURE, menu_temperature);
-  #endif
-
   #if HAS_POWER_MONITOR
     MENU_ITEM(submenu, MSG_POWER_MONITOR, menu_power_monitor);
   #endif
@@ -184,17 +174,6 @@ void menu_main() {
       SUBMENU_P(PSTR(CUSTOM_USER_MENU_TITLE), menu_user);
     #else
       SUBMENU(MSG_USER_MENU, menu_user);
-    #endif
-  #endif
-
-  #if ENABLED(ADVANCED_PAUSE_FEATURE)
-    #if E_STEPPERS == 1 && DISABLED(FILAMENT_LOAD_UNLOAD_GCODES)
-      if (thermalManager.targetHotEnoughToExtrude(active_extruder))
-        GCODES_ITEM(MSG_FILAMENTCHANGE, PSTR("M600 B0"));
-      else
-        SUBMENU(MSG_FILAMENTCHANGE, []{ _menu_temp_filament_op(PAUSE_MODE_CHANGE_FILAMENT, 0); });
-    #else
-      SUBMENU(MSG_FILAMENTCHANGE, menu_change_filament);
     #endif
   #endif
 
