@@ -44,7 +44,7 @@ namespace {
   constexpr float DEFAULT_Z_START_MM = 40.0f;
   constexpr float DEFAULT_SLOT_SPACING_MM = 16.0f;
   constexpr float DEFAULT_TRAY_GAP_MM = 36.0f;
-  constexpr float DEFAULT_ROW_SPACING_MM = 18.0f;
+  constexpr float DEFAULT_ROW_SPACING_MM = 12.7f; // ~0.5in row-to-row Z change
 
   static tray_pos_t tray_positions[TRAY_POSITIONS];
 
@@ -54,7 +54,21 @@ namespace {
   static bool row2_anchor_ready = false;
   static tray_pos_t row2_first = {};
 
-  constexpr float Z_BUMP_MM = 6.35f; // 0.25in
+  constexpr float Z_BUMP_MM = 6.35f;            // 0.25in
+  constexpr float MIN_ROW_Z_DELTA_MM = 12.7f;  // ~0.5in
+
+  enum tray_cycle_phase_t : uint8_t {
+    PHASE_IDLE,
+    PHASE_FORWARD,
+    PHASE_REVERSE,
+    PHASE_COMPLETE
+  };
+
+  static uint16_t completed_tray_count = 0;
+  static tray_cycle_phase_t tray_cycle_phase = PHASE_IDLE;
+  static uint8_t active_tray = 1;
+  static uint8_t active_row = 1;
+  static uint8_t active_slot = 1;
 
   uint8_t tray_position_index = 0;
 
@@ -102,7 +116,10 @@ namespace {
   bool generate_pattern_from_manual_anchors() {
     if (manual_anchor_count < TRAY_COLUMNS || !row2_anchor_ready) return false;
 
-    const float z_step = row2_first.z - manual_row1[0].z;
+    const float raw_z_step = row2_first.z - manual_row1[0].z;
+    const float z_step = ABS(raw_z_step) < MIN_ROW_Z_DELTA_MM
+      ? (raw_z_step < 0 ? -MIN_ROW_Z_DELTA_MM : MIN_ROW_Z_DELTA_MM)
+      : raw_z_step;
 
     for (uint8_t row = 0; row < TRAY_ROWS; ++row) {
       const float row_z = manual_row1[0].z + z_step * row;
@@ -134,6 +151,9 @@ namespace {
 
     do_blocking_move_to(target.x, current_position.y, target.z);
     tray_position_index = index;
+    active_row = (index / TRAY_COLUMNS) + 1;
+    active_tray = tray_number_for_col(index % TRAY_COLUMNS);
+    active_slot = slot_number_for_col(index % TRAY_COLUMNS);
     ui.completion_feedback();
   }
 
@@ -212,34 +232,82 @@ namespace {
     initialize_tray_positions();
     if (!tray_loader_ready()) return;
 
-    for (uint8_t row = 0; row < TRAY_ROWS; ++row) {
-      for (uint8_t col = 0; col < TRAY_COLUMNS; ++col) {
-        const uint8_t index = row * TRAY_COLUMNS + col;
-        const tray_pos_t target = clamp_tray_position(tray_positions[index]);
-        const uint8_t next_index = (index + 1) % TRAY_POSITIONS;
-        const uint8_t next_col = next_index % TRAY_COLUMNS;
+    tray_cycle_phase = PHASE_FORWARD;
 
-        if (!tray_position_within_limits(target)) {
-          ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
-          return;
-        }
+    for (uint8_t index = 0; index < TRAY_POSITIONS; ++index) {
+      const uint8_t row = index / TRAY_COLUMNS;
+      const uint8_t col = index % TRAY_COLUMNS;
+      const tray_pos_t target = clamp_tray_position(tray_positions[index]);
 
-        ui.status_printf_P(
-          0,
-          PSTR("Tray %u Slot %u (Row %u/10) -> T%uS%u"),
-          int(tray_number_for_col(col)),
-          int(slot_number_for_col(col)),
-          int(row + 1),
-          int(tray_number_for_col(next_col)),
-          int(slot_number_for_col(next_col))
-        );
-
-        do_blocking_move_to(target.x, current_position.y, target.z);
-        tray_position_index = index;
+      if (!tray_position_within_limits(target)) {
+        ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
+        return;
       }
+
+      active_tray = tray_number_for_col(col);
+      active_row = row + 1;
+      active_slot = slot_number_for_col(col);
+      ui.status_printf_P(0, PSTR("Cycle FWD T%u R%u S%u"), int(active_tray), int(active_row), int(active_slot));
+
+      do_blocking_move_to(target.x, current_position.y, target.z);
+      tray_position_index = index;
+
+      if (row == TRAY_ROWS - 1 && (col & 0x01))
+        ++completed_tray_count;
     }
 
+    tray_cycle_phase = PHASE_REVERSE;
+
+    for (int16_t index = TRAY_POSITIONS - 1; index >= 0; --index) {
+      const uint8_t row = uint8_t(index) / TRAY_COLUMNS;
+      const uint8_t col = uint8_t(index) % TRAY_COLUMNS;
+      const tray_pos_t target = clamp_tray_position(tray_positions[index]);
+
+      if (!tray_position_within_limits(target)) {
+        ui.status_printf_P(0, PSTR("Blocked out-of-range target"));
+        return;
+      }
+
+      active_tray = tray_number_for_col(col);
+      active_row = row + 1;
+      active_slot = slot_number_for_col(col);
+      ui.status_printf_P(0, PSTR("Cycle REV T%u R%u S%u"), int(active_tray), int(active_row), int(active_slot));
+
+      do_blocking_move_to(target.x, current_position.y, target.z);
+      tray_position_index = uint8_t(index);
+    }
+
+    tray_cycle_phase = PHASE_COMPLETE;
+    queue.inject_P(PSTR("G28"));
+
     ui.completion_feedback();
+  }
+
+  void draw_info_screen() {
+    START_MENU();
+    BACK_ITEM(MSG_BACK);
+
+    static char trays_done_line[24];
+    static char cycle_line[24];
+    static char where_line[24];
+
+    sprintf_P(trays_done_line, PSTR("Trays Loaded: %u"), completed_tray_count);
+
+    const char *phase = "Idle";
+    switch (tray_cycle_phase) {
+      case PHASE_FORWARD: phase = "Forward"; break;
+      case PHASE_REVERSE: phase = "Reverse"; break;
+      case PHASE_COMPLETE: phase = "Complete"; break;
+      default: break;
+    }
+    sprintf_P(cycle_line, PSTR("Cycle: %s"), phase);
+    sprintf_P(where_line, PSTR("Tray %u Row %u S%u"), active_tray, active_row, active_slot);
+
+    STATIC_ITEM_P(PSTR("The Kinetic Group"), SS_DEFAULT|SS_CENTER);
+    STATIC_ITEM_P(trays_done_line);
+    STATIC_ITEM_P(cycle_line);
+    STATIC_ITEM_P(where_line);
+    END_MENU();
   }
 
   void set_speed_percent(const int16_t percent) {
@@ -274,6 +342,7 @@ void menu_tray_loader() {
   ACTION_ITEM_P(PSTR("Save Spot 7 (Row2S1)"), action_set_row2_first);
   ACTION_ITEM_P(PSTR("Next Position"), action_next);
   ACTION_ITEM_P(PSTR("Prev Position"), action_prev);
+  SUBMENU_P(PSTR("Information"), draw_info_screen);
   ACTION_ITEM_P(PSTR("Auto Run"), action_auto_run);
   ACTION_ITEM_P(PSTR("Speed 80%"), action_speed_80);
   ACTION_ITEM_P(PSTR("Speed 100%"), action_speed_100);
