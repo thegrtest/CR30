@@ -367,6 +367,10 @@ namespace {
 
 }
 
+void menu_tray_loader_info_screen() {
+  draw_info_screen();
+}
+
 void menu_tray_loader() {
   START_MENU();
   BACK_ITEM(MSG_MAIN);
