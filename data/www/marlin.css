@@ -156,12 +156,12 @@ body.loading #loading-screen {
 .round-tip {
   position: absolute;
   left: 2px;
-  top: -20px;
+  top: -21px;
   width: 22px;
   height: 24px;
-  border-radius: 50% 50% 40% 40%;
-  background: linear-gradient(#efe1c8, #c6ad7f 72%);
+  background: linear-gradient(#f1e4cd 0%, #d7c09a 42%, #b3986b 100%);
   border: 2px solid #8a7350;
+  clip-path: polygon(50% 0%, 94% 100%, 6% 100%);
 }
 
 .round-neck {
