@@ -86,65 +86,127 @@ body.loading #loading-screen {
 
 .conveyor {
   position: relative;
-  width: min(92vw, 900px);
-  padding: 28px 0;
+  width: min(92vw, 980px);
+  padding: 24px 0 42px;
 }
 
 .conveyor-rail {
   height: 6px;
   border-radius: 8px;
-  background: linear-gradient(90deg, #5c5c5c, #8c8c8c 40%, #5c5c5c);
-  opacity: 0.9;
+  background: linear-gradient(90deg, #505050, #9a9a9a 38%, #575757);
+  opacity: 0.92;
 }
 
 .conveyor-rail.top { margin-bottom: 8px; }
 .conveyor-rail.bottom { margin-top: 8px; }
 
 .belt {
-  height: 36px;
+  position: relative;
+  height: 42px;
   border: 2px solid #3b3b3b;
   border-radius: 8px;
   background:
-    linear-gradient(to right, rgba(255, 255, 255, 0.12) 0 8%, transparent 8% 16%) 0 0 / 42px 100%,
-    linear-gradient(#3a3a3a, #1f1f1f);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 18px rgba(109, 165, 125, 0.08);
-  animation: conveyor-roll 0.7s linear infinite;
+    linear-gradient(to right, rgba(255, 255, 255, 0.14) 0 7%, transparent 7% 16%) 0 0 / 44px 100%,
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0 2px, transparent 2px 10px),
+    linear-gradient(#3d3d3d, #1f1f1f);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 18px rgba(109, 165, 125, 0.12);
+  overflow: hidden;
+  animation: conveyor-roll 0.6s linear infinite;
 }
 
-.bullet-shell,
-.bullet-tip {
+.component-pile {
   position: absolute;
-  left: -60px;
-  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
-  animation: bullet-run 1.8s cubic-bezier(.2, .8, .4, 1) infinite;
+  bottom: -2px;
+  height: 30px;
+  min-width: 92px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  color: #241c12;
+  font-family: "Lucida Console", Monaco, monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.72rem;
+  box-shadow: 0 8px 10px rgba(0, 0, 0, 0.32);
 }
 
-.bullet-shell {
-  top: 5px;
+.component-pile.bullet {
+  left: 6px;
+  background: linear-gradient(#ebddbf, #c5a772);
+}
+
+.component-pile.brass {
+  right: 6px;
+  background: linear-gradient(#d8b783, #98703e);
+}
+
+.round {
+  position: absolute;
+  left: -96px;
+  top: -1px;
+  width: 26px;
+  height: 58px;
+  filter: drop-shadow(0 7px 10px rgba(0, 0, 0, 0.45));
+  animation: round-run 2.35s cubic-bezier(.2, .8, .4, 1) infinite;
+}
+
+.round-tip {
+  position: absolute;
+  left: 2px;
+  top: -21px;
   width: 22px;
-  height: 48px;
-  border-radius: 10px;
-  background: linear-gradient(#dfc796, #b69256 46%, #8f6d3a);
-  border: 2px solid #735833;
+  height: 24px;
+  background: linear-gradient(#f1e4cd 0%, #d7c09a 42%, #b3986b 100%);
+  border: 2px solid #8a7350;
+  clip-path: polygon(50% 0%, 94% 100%, 6% 100%);
 }
 
-.bullet-tip {
-  top: -12px;
-  width: 0;
-  height: 0;
-  border-left: 11px solid transparent;
-  border-right: 11px solid transparent;
-  border-bottom: 20px solid #e3d0ab;
+.round-neck {
+  position: absolute;
+  left: 4px;
+  top: 2px;
+  width: 18px;
+  height: 8px;
+  background: linear-gradient(#d7c096, #b59463);
+  border-left: 2px solid #87693d;
+  border-right: 2px solid #87693d;
+}
+
+.round-body {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 26px;
+  height: 44px;
+  border-radius: 9px 9px 8px 8px;
+  border: 2px solid #7c5f34;
+  background: linear-gradient(#e3ca98, #ba9258 52%, #8d6738);
+}
+
+.round-rim {
+  position: absolute;
+  left: -2px;
+  bottom: -4px;
+  width: 30px;
+  height: 7px;
+  border-radius: 5px;
+  border: 2px solid #72562e;
+  background: linear-gradient(#d5b684, #a17845);
 }
 
 @keyframes conveyor-roll {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: -42px 0, 0 0; }
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: -44px 0, -30px 0, 0 0; }
 }
 
-@keyframes bullet-run {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(min(92vw, 900px) + 120px)); }
+@keyframes round-run {
+  0% { transform: translateX(0) translateY(0); }
+  8% { transform: translateX(110px) translateY(-2px); }
+  85% { transform: translateX(calc(min(92vw, 980px) - 56px)) translateY(0); }
+  100% { transform: translateX(calc(min(92vw, 980px) + 120px)) translateY(0); }
 }
 h1 {
   margin: 0;
