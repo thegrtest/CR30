@@ -34,17 +34,21 @@ namespace {
 
   constexpr uint8_t TRAY_POSITIONS = 60;
 
-  static constexpr xy_pos_t tray_positions[TRAY_POSITIONS] = {
+  struct tray_pos_t { float x, z; };
+
+  static constexpr tray_pos_t tray_positions[TRAY_POSITIONS] = {
+    // 3 trays side-by-side, each tray is a 10x2 grid.
+    // For each Z row, hit the 2 X points of tray 1, then tray 2, then tray 3.
     { -44.45f,  57.15f }, { -31.75f,  57.15f }, { -6.35f,  57.15f }, {  6.35f,  57.15f }, { 31.75f,  57.15f }, { 44.45f,  57.15f },
-    {  44.45f,  44.45f }, {  31.75f,  44.45f }, {  6.35f,  44.45f }, { -6.35f,  44.45f }, { -31.75f,  44.45f }, { -44.45f,  44.45f },
+    { -44.45f,  44.45f }, { -31.75f,  44.45f }, { -6.35f,  44.45f }, {  6.35f,  44.45f }, { 31.75f,  44.45f }, { 44.45f,  44.45f },
     { -44.45f,  31.75f }, { -31.75f,  31.75f }, { -6.35f,  31.75f }, {  6.35f,  31.75f }, { 31.75f,  31.75f }, { 44.45f,  31.75f },
-    {  44.45f,  19.05f }, {  31.75f,  19.05f }, {  6.35f,  19.05f }, { -6.35f,  19.05f }, { -31.75f,  19.05f }, { -44.45f,  19.05f },
+    { -44.45f,  19.05f }, { -31.75f,  19.05f }, { -6.35f,  19.05f }, {  6.35f,  19.05f }, { 31.75f,  19.05f }, { 44.45f,  19.05f },
     { -44.45f,   6.35f }, { -31.75f,   6.35f }, { -6.35f,   6.35f }, {  6.35f,   6.35f }, { 31.75f,   6.35f }, { 44.45f,   6.35f },
-    {  44.45f,  -6.35f }, {  31.75f,  -6.35f }, {  6.35f,  -6.35f }, { -6.35f,  -6.35f }, { -31.75f,  -6.35f }, { -44.45f,  -6.35f },
+    { -44.45f,  -6.35f }, { -31.75f,  -6.35f }, { -6.35f,  -6.35f }, {  6.35f,  -6.35f }, { 31.75f,  -6.35f }, { 44.45f,  -6.35f },
     { -44.45f, -19.05f }, { -31.75f, -19.05f }, { -6.35f, -19.05f }, {  6.35f, -19.05f }, { 31.75f, -19.05f }, { 44.45f, -19.05f },
-    {  44.45f, -31.75f }, {  31.75f, -31.75f }, {  6.35f, -31.75f }, { -6.35f, -31.75f }, { -31.75f, -31.75f }, { -44.45f, -31.75f },
+    { -44.45f, -31.75f }, { -31.75f, -31.75f }, { -6.35f, -31.75f }, {  6.35f, -31.75f }, { 31.75f, -31.75f }, { 44.45f, -31.75f },
     { -44.45f, -44.45f }, { -31.75f, -44.45f }, { -6.35f, -44.45f }, {  6.35f, -44.45f }, { 31.75f, -44.45f }, { 44.45f, -44.45f },
-    {  44.45f, -57.15f }, {  31.75f, -57.15f }, {  6.35f, -57.15f }, { -6.35f, -57.15f }, { -31.75f, -57.15f }, { -44.45f, -57.15f }
+    { -44.45f, -57.15f }, { -31.75f, -57.15f }, { -6.35f, -57.15f }, {  6.35f, -57.15f }, { 31.75f, -57.15f }, { 44.45f, -57.15f }
   };
 
   uint8_t tray_position_index = 0;
@@ -57,7 +61,7 @@ namespace {
 
   void move_to_tray_position(const uint8_t index) {
     if (!tray_loader_ready()) return;
-    do_blocking_move_to_xy(tray_positions[index]);
+    do_blocking_move_to(tray_positions[index].x, current_position.y, tray_positions[index].z);
     tray_position_index = index;
     ui.completion_feedback();
   }
@@ -68,7 +72,7 @@ namespace {
 
   void action_center() {
     if (!tray_loader_ready()) return;
-    do_blocking_move_to_xy(0.0f, 0.0f);
+    do_blocking_move_to(0.0f, current_position.y, 0.0f);
     ui.completion_feedback();
   }
 
@@ -86,8 +90,10 @@ namespace {
 
   void action_auto_run() {
     if (!tray_loader_ready()) return;
-    for (uint8_t i = 0; i < TRAY_POSITIONS; ++i)
-      do_blocking_move_to_xy(tray_positions[(tray_position_index + i) % TRAY_POSITIONS]);
+    for (uint8_t i = 0; i < TRAY_POSITIONS; ++i) {
+      const tray_pos_t &tray = tray_positions[(tray_position_index + i) % TRAY_POSITIONS];
+      do_blocking_move_to(tray.x, current_position.y, tray.z);
+    }
     tray_position_index = (tray_position_index + TRAY_POSITIONS - 1) % TRAY_POSITIONS;
     ui.completion_feedback();
   }
