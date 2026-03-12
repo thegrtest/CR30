@@ -56,6 +56,7 @@ void menu_temperature();
 void menu_configuration();
 void menu_repeat_markers();
 void menu_language();
+void menu_tray_loader();
 
 #if ENABLED(CUSTOM_USER_MENUS)
   void menu_user();
@@ -153,6 +154,7 @@ void menu_main() {
       ACTION_ITEM(MSG_RESUME_PRINT, ui.resume_print);
 
     SUBMENU(MSG_MOTION, menu_motion);
+    SUBMENU_P(PSTR("Tray Loader"), menu_tray_loader);
   }
 
   #if HAS_CUTTER
